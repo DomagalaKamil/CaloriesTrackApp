@@ -19,8 +19,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.caloriestrack.data.CaloriesRepository
+import com.example.caloriestrack.data.CaloriesTrackDatabase
+import com.example.caloriestrack.ui.products.ProductsScreen
 import com.example.caloriestrack.ui.theme.CaloriesTrackTheme
 
 class MainActivity : ComponentActivity() {
@@ -56,7 +60,16 @@ fun CaloriesTrackApp() {
     ) { innerPadding ->
         when (selectedSection) {
             AppSection.Today -> TodayScreen(Modifier.padding(innerPadding))
-            AppSection.Products -> ProductsScreen(Modifier.padding(innerPadding))
+            AppSection.Products -> {
+                val context = LocalContext.current
+                val repository = remember(context) {
+                    CaloriesRepository.fromDatabase(CaloriesTrackDatabase.getDatabase(context))
+                }
+                ProductsScreen(
+                    repository = repository,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
             AppSection.History -> HistoryScreen(Modifier.padding(innerPadding))
             AppSection.Analysis -> AnalysisScreen(Modifier.padding(innerPadding))
             AppSection.Goals -> GoalsScreen(Modifier.padding(innerPadding))
@@ -80,15 +93,6 @@ private fun TodayScreen(modifier: Modifier = Modifier) {
     PlaceholderScreen(
         title = "Today",
         description = "Track today's calories and macros.",
-        modifier = modifier
-    )
-}
-
-@Composable
-private fun ProductsScreen(modifier: Modifier = Modifier) {
-    PlaceholderScreen(
-        title = "Products",
-        description = "Save foods you eat regularly.",
         modifier = modifier
     )
 }
