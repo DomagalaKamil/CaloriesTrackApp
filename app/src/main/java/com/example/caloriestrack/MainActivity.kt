@@ -26,6 +26,7 @@ import com.example.caloriestrack.data.CaloriesRepository
 import com.example.caloriestrack.data.CaloriesTrackDatabase
 import com.example.caloriestrack.ui.products.ProductsScreen
 import com.example.caloriestrack.ui.theme.CaloriesTrackTheme
+import com.example.caloriestrack.ui.today.TodayScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +43,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CaloriesTrackApp() {
     var selectedSection by remember { mutableStateOf(AppSection.Today) }
+    val context = LocalContext.current
+    val repository = remember(context) {
+        CaloriesRepository.fromDatabase(CaloriesTrackDatabase.getDatabase(context))
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -59,12 +64,13 @@ fun CaloriesTrackApp() {
         }
     ) { innerPadding ->
         when (selectedSection) {
-            AppSection.Today -> TodayScreen(Modifier.padding(innerPadding))
+            AppSection.Today -> {
+                TodayScreen(
+                    repository = repository,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
             AppSection.Products -> {
-                val context = LocalContext.current
-                val repository = remember(context) {
-                    CaloriesRepository.fromDatabase(CaloriesTrackDatabase.getDatabase(context))
-                }
                 ProductsScreen(
                     repository = repository,
                     modifier = Modifier.padding(innerPadding)
@@ -86,15 +92,6 @@ private enum class AppSection(
     History("History", "H"),
     Analysis("Analysis", "A"),
     Goals("Goals", "G")
-}
-
-@Composable
-private fun TodayScreen(modifier: Modifier = Modifier) {
-    PlaceholderScreen(
-        title = "Today",
-        description = "Track today's calories and macros.",
-        modifier = modifier
-    )
 }
 
 @Composable
