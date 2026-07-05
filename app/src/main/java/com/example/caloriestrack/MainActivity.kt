@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.caloriestrack.data.CaloriesRepository
 import com.example.caloriestrack.data.CaloriesTrackDatabase
+import com.example.caloriestrack.ui.goals.GoalsScreen
 import com.example.caloriestrack.ui.products.ProductsScreen
 import com.example.caloriestrack.ui.theme.CaloriesTrackTheme
 import com.example.caloriestrack.ui.today.TodayScreen
@@ -78,7 +79,12 @@ fun CaloriesTrackApp() {
             }
             AppSection.History -> HistoryScreen(Modifier.padding(innerPadding))
             AppSection.Analysis -> AnalysisScreen(Modifier.padding(innerPadding))
-            AppSection.Goals -> GoalsScreen(Modifier.padding(innerPadding))
+            AppSection.Goals -> {
+                GoalsScreen(
+                    repository = repository,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
         }
     }
 }
@@ -108,15 +114,6 @@ private fun AnalysisScreen(modifier: Modifier = Modifier) {
     PlaceholderScreen(
         title = "Analysis",
         description = "See weekly and monthly trends.",
-        modifier = modifier
-    )
-}
-
-@Composable
-private fun GoalsScreen(modifier: Modifier = Modifier) {
-    PlaceholderScreen(
-        title = "Goals",
-        description = "Set daily and weekly targets.",
         modifier = modifier
     )
 }
