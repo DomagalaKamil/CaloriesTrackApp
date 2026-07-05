@@ -14,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.caloriestrack.data.CaloriesRepository
 import com.example.caloriestrack.data.FoodEntryEntity
+import com.example.caloriestrack.data.GoalEntity
 import com.example.caloriestrack.data.ProductEntity
 import java.time.LocalDate
 import kotlinx.coroutines.launch
@@ -44,10 +46,19 @@ fun TodayScreen(
     val dateText = remember(date) { date.toString() }
     var products by remember { mutableStateOf(emptyList<ProductEntity>()) }
     var entries by remember { mutableStateOf(emptyList<FoodEntryEntity>()) }
+    var goals by remember { mutableStateOf<GoalEntity?>(null) }
+    var editingEntry by remember { mutableStateOf<FoodEntryEntity?>(null) }
     var selectedProduct by remember { mutableStateOf<ProductEntity?>(null) }
     var amount by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+
+    fun clearFoodForm() {
+        editingEntry = null
+        selectedProduct = null
+        amount = ""
+        errorMessage = null
+    }
 
     LaunchedEffect(repository) {
         repository.observeProducts().collect { products = it }
@@ -57,6 +68,10 @@ fun TodayScreen(
         repository.observeEntriesForDate(dateText).collect { entries = it }
     }
 
+    LaunchedEffect(repository) {
+        repository.observeGoals().collect { goals = it }
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -64,11 +79,16 @@ fun TodayScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            TodaySummary(date = date, entries = entries)
+            TodaySummary(
+                date = date,
+                entries = entries,
+                goals = goals
+            )
         }
 
         item {
-            AddFoodSection(
+            AddEditFoodSection(
+                editingEntry = editingEntry,
                 products = products,
                 selectedProduct = selectedProduct,
                 amount = amount,
@@ -86,21 +106,25 @@ fun TodayScreen(
                     val entry = buildEntryOrNull(
                         date = dateText,
                         product = selectedProduct,
-                        amount = amount
+                        amount = amount,
+                        existingEntry = editingEntry
                     )
 
                     if (entry == null) {
                         errorMessage = "Select a product and enter a valid amount."
-                        return@AddFoodSection
+                        return@AddEditFoodSection
                     }
 
                     coroutineScope.launch {
-                        repository.addFoodEntry(entry)
-                        selectedProduct = null
-                        amount = ""
-                        errorMessage = null
+                        if (editingEntry == null) {
+                            repository.addFoodEntry(entry)
+                        } else {
+                            repository.updateFoodEntry(entry)
+                        }
+                        clearFoodForm()
                     }
-                }
+                },
+                onCancelEdit = ::clearFoodForm
             )
         }
 
@@ -122,9 +146,23 @@ fun TodayScreen(
             items(entries, key = { it.id }) { entry ->
                 FoodEntryItem(
                     entry = entry,
+                    onEdit = {
+                        val product = products.firstOrNull { it.id == entry.productId }
+                        if (product == null) {
+                            errorMessage = "This entry cannot be edited because its product was deleted."
+                            return@FoodEntryItem
+                        }
+                        editingEntry = entry
+                        selectedProduct = product
+                        amount = entry.amount.toCleanText()
+                        errorMessage = null
+                    },
                     onDelete = {
                         coroutineScope.launch {
                             repository.deleteFoodEntry(entry)
+                            if (editingEntry?.id == entry.id) {
+                                clearFoodForm()
+                            }
                         }
                     }
                 )
@@ -136,12 +174,16 @@ fun TodayScreen(
 @Composable
 private fun TodaySummary(
     date: LocalDate,
-    entries: List<FoodEntryEntity>
+    entries: List<FoodEntryEntity>,
+    goals: GoalEntity?
 ) {
     val calories = entries.sumOf { it.calories }
     val protein = entries.sumOf { it.proteinGrams }
     val carbohydrates = entries.sumOf { it.carbohydrateGrams }
     val fat = entries.sumOf { it.fatGrams }
+    val dailyGoal = goals?.dailyCalorieGoal?.takeIf { it > 0 }
+    val remainingCalories = dailyGoal?.minus(calories)
+    val progress = dailyGoal?.let { (calories / it).toFloat().coerceIn(0f, 1f) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -161,6 +203,25 @@ private fun TodaySummary(
                     text = "${calories.toCleanText()} kcal",
                     style = MaterialTheme.typography.titleLarge
                 )
+                if (dailyGoal != null && remainingCalories != null && progress != null) {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = if (remainingCalories >= 0) {
+                            "${remainingCalories.toCleanText()} kcal remaining"
+                        } else {
+                            "${(-remainingCalories).toCleanText()} kcal over goal"
+                        },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else {
+                    Text(
+                        text = "No daily goal set yet.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
                 Text(
                     text = "Protein ${protein.toCleanText()}g",
                     style = MaterialTheme.typography.bodyMedium
@@ -179,20 +240,22 @@ private fun TodaySummary(
 }
 
 @Composable
-private fun AddFoodSection(
+private fun AddEditFoodSection(
+    editingEntry: FoodEntryEntity?,
     products: List<ProductEntity>,
     selectedProduct: ProductEntity?,
     amount: String,
     errorMessage: String?,
     onProductSelected: (ProductEntity) -> Unit,
     onAmountChange: (String) -> Unit,
-    onAddFood: () -> Unit
+    onAddFood: () -> Unit,
+    onCancelEdit: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Add food",
+            text = if (editingEntry == null) "Add food" else "Edit food",
             style = MaterialTheme.typography.titleLarge
         )
         if (products.isEmpty()) {
@@ -256,8 +319,15 @@ private fun AddFoodSection(
                 style = MaterialTheme.typography.bodyMedium
             )
         }
-        Button(onClick = onAddFood) {
-            Text("Add to today")
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onAddFood) {
+                Text(if (editingEntry == null) "Add to today" else "Update entry")
+            }
+            if (editingEntry != null) {
+                OutlinedButton(onClick = onCancelEdit) {
+                    Text("Cancel")
+                }
+            }
         }
     }
 }
@@ -265,6 +335,7 @@ private fun AddFoodSection(
 @Composable
 private fun FoodEntryItem(
     entry: FoodEntryEntity,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -293,8 +364,13 @@ private fun FoodEntryItem(
                 text = "P ${entry.proteinGrams.toCleanText()}g  C ${entry.carbohydrateGrams.toCleanText()}g  F ${entry.fatGrams.toCleanText()}g",
                 style = MaterialTheme.typography.bodyMedium
             )
-            TextButton(onClick = onDelete) {
-                Text("Delete")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onEdit) {
+                    Text("Edit")
+                }
+                TextButton(onClick = onDelete) {
+                    Text("Delete")
+                }
             }
         }
     }
@@ -303,7 +379,8 @@ private fun FoodEntryItem(
 private fun buildEntryOrNull(
     date: String,
     product: ProductEntity?,
-    amount: String
+    amount: String,
+    existingEntry: FoodEntryEntity? = null
 ): FoodEntryEntity? {
     val parsedAmount = amount.toDoubleOrNull()
     if (product == null || parsedAmount == null || parsedAmount <= 0 || product.basePortionAmount <= 0) {
@@ -313,7 +390,7 @@ private fun buildEntryOrNull(
     val multiplier = parsedAmount / product.basePortionAmount
 
     return FoodEntryEntity(
-        0,
+        existingEntry?.id ?: 0,
         date,
         product.id,
         product.name,
@@ -323,7 +400,7 @@ private fun buildEntryOrNull(
         product.proteinGrams * multiplier,
         product.carbohydrateGrams * multiplier,
         product.fatGrams * multiplier,
-        System.currentTimeMillis()
+        existingEntry?.createdAtMillis ?: System.currentTimeMillis()
     )
 }
 
