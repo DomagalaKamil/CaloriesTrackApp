@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.example.caloriestrack.data.CaloriesRepository
 import com.example.caloriestrack.data.CaloriesTrackDatabase
 import com.example.caloriestrack.ui.goals.GoalsScreen
+import com.example.caloriestrack.ui.history.HistoryScreen
 import com.example.caloriestrack.ui.products.ProductsScreen
 import com.example.caloriestrack.ui.theme.CaloriesTrackTheme
 import com.example.caloriestrack.ui.today.TodayScreen
@@ -77,7 +78,12 @@ fun CaloriesTrackApp() {
                     modifier = Modifier.padding(innerPadding)
                 )
             }
-            AppSection.History -> HistoryScreen(Modifier.padding(innerPadding))
+            AppSection.History -> {
+                HistoryScreen(
+                    repository = repository,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
             AppSection.Analysis -> AnalysisScreen(Modifier.padding(innerPadding))
             AppSection.Goals -> {
                 GoalsScreen(
@@ -98,15 +104,6 @@ private enum class AppSection(
     History("History", "H"),
     Analysis("Analysis", "A"),
     Goals("Goals", "G")
-}
-
-@Composable
-private fun HistoryScreen(modifier: Modifier = Modifier) {
-    PlaceholderScreen(
-        title = "History",
-        description = "Review previous days.",
-        modifier = modifier
-    )
 }
 
 @Composable
