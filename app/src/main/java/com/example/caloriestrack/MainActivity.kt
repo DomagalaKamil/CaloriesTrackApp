@@ -4,11 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -21,9 +18,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.example.caloriestrack.data.CaloriesRepository
 import com.example.caloriestrack.data.CaloriesTrackDatabase
+import com.example.caloriestrack.ui.analysis.AnalysisScreen
 import com.example.caloriestrack.ui.goals.GoalsScreen
 import com.example.caloriestrack.ui.history.HistoryScreen
 import com.example.caloriestrack.ui.products.ProductsScreen
@@ -84,7 +81,12 @@ fun CaloriesTrackApp() {
                     modifier = Modifier.padding(innerPadding)
                 )
             }
-            AppSection.Analysis -> AnalysisScreen(Modifier.padding(innerPadding))
+            AppSection.Analysis -> {
+                AnalysisScreen(
+                    repository = repository,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
             AppSection.Goals -> {
                 GoalsScreen(
                     repository = repository,
@@ -104,38 +106,6 @@ private enum class AppSection(
     History("History", "H"),
     Analysis("Analysis", "A"),
     Goals("Goals", "G")
-}
-
-@Composable
-private fun AnalysisScreen(modifier: Modifier = Modifier) {
-    PlaceholderScreen(
-        title = "Analysis",
-        description = "See weekly and monthly trends.",
-        modifier = modifier
-    )
-}
-
-@Composable
-private fun PlaceholderScreen(
-    title: String,
-    description: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyLarge
-        )
-    }
 }
 
 @Preview(showBackground = true)
