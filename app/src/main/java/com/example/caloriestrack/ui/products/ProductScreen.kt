@@ -1,6 +1,7 @@
 package com.example.caloriestrack.ui.products
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +12,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -64,10 +67,11 @@ fun ProductsScreen(
         name = product.name
         portionAmount = product.basePortionAmount.toCleanText()
         portionUnit = product.basePortionUnit
-        calories = product.calories.toCleanText()
-        protein = product.proteinGrams.toCleanText()
-        carbohydrates = product.carbohydrateGrams.toCleanText()
-        fat = product.fatGrams.toCleanText()
+        val per100Multiplier = 100.0 / product.basePortionAmount
+        calories = (product.calories * per100Multiplier).toCleanText()
+        protein = (product.proteinGrams * per100Multiplier).toCleanText()
+        carbohydrates = (product.carbohydrateGrams * per100Multiplier).toCleanText()
+        fat = (product.fatGrams * per100Multiplier).toCleanText()
         errorMessage = null
     }
 
@@ -94,7 +98,10 @@ fun ProductsScreen(
                 errorMessage = errorMessage,
                 onNameChange = { name = it },
                 onPortionAmountChange = { portionAmount = it },
-                onPortionUnitChange = { portionUnit = it },
+                onPortionUnitChange = { selectedUnit ->
+                    portionUnit = selectedUnit
+                    errorMessage = null
+                },
                 onCaloriesChange = { calories = it },
                 onProteinChange = { protein = it },
                 onCarbohydratesChange = { carbohydrates = it },
@@ -200,18 +207,20 @@ private fun ProductForm(
                 value = portionAmount,
                 onValueChange = onPortionAmountChange,
                 modifier = Modifier.weight(1f),
-                label = { Text("Portion") },
+                label = { Text("Full portion size") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true
             )
-            OutlinedTextField(
-                value = portionUnit,
-                onValueChange = onPortionUnitChange,
+            UnitDropdown(
+                selectedUnit = portionUnit,
+                onUnitSelected = onPortionUnitChange,
                 modifier = Modifier.weight(1f),
-                label = { Text("Unit") },
-                singleLine = true
             )
         }
+        Text(
+            text = "Per 100 ml/g",
+            style = MaterialTheme.typography.titleMedium
+        )
         OutlinedTextField(
             value = calories,
             onValueChange = onCaloriesChange,
@@ -261,6 +270,38 @@ private fun ProductForm(
 }
 
 @Composable
+private fun UnitDropdown(
+    selectedUnit: String,
+    onUnitSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(selectedUnit)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            ProductUnit.entries.forEach { unit ->
+                DropdownMenuItem(
+                    text = { Text(unit.label) },
+                    onClick = {
+                        onUnitSelected(unit.label)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun MacroTextField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -293,7 +334,7 @@ private fun ProductListItem(
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = "${product.basePortionAmount.toCleanText()}${product.basePortionUnit} - ${product.calories.toCleanText()} kcal",
+                text = "${product.basePortionAmount.toCleanText()} ${product.basePortionUnit} - ${product.calories.toCleanText()} kcal",
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
@@ -347,17 +388,24 @@ private fun buildProductOrNull(
         return null
     }
 
+    val nutritionMultiplier = parsedPortionAmount / 100.0
+
     return ProductEntity(
         editingProduct?.id ?: 0,
         trimmedName,
         parsedPortionAmount,
         trimmedUnit,
-        parsedCalories,
-        parsedProtein,
-        parsedCarbohydrates,
-        parsedFat,
+        parsedCalories * nutritionMultiplier,
+        parsedProtein * nutritionMultiplier,
+        parsedCarbohydrates * nutritionMultiplier,
+        parsedFat * nutritionMultiplier,
         editingProduct?.createdAtMillis ?: System.currentTimeMillis()
     )
+}
+
+private enum class ProductUnit(val label: String) {
+    Ml("ml"),
+    Grams("g")
 }
 
 private fun Double.toCleanText(): String {

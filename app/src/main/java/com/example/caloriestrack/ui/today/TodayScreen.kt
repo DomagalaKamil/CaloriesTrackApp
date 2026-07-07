@@ -95,12 +95,18 @@ fun TodayScreen(
                 errorMessage = errorMessage,
                 onProductSelected = {
                     selectedProduct = it
-                    amount = it.basePortionAmount.toCleanText()
+                    amount = it.defaultEntryAmount()
                     errorMessage = null
                 },
                 onAmountChange = {
                     amount = it
                     errorMessage = null
+                },
+                onUsePortionFraction = { fraction ->
+                    selectedProduct?.let { product ->
+                        amount = product.portionFractionAmount(fraction)
+                        errorMessage = null
+                    }
                 },
                 onAddFood = {
                     val entry = buildEntryOrNull(
@@ -154,7 +160,7 @@ fun TodayScreen(
                         }
                         editingEntry = entry
                         selectedProduct = product
-                        amount = entry.amount.toCleanText()
+                        amount = entry.toEditableAmount(product)
                         errorMessage = null
                     },
                     onDelete = {
@@ -248,6 +254,7 @@ private fun AddEditFoodSection(
     errorMessage: String?,
     onProductSelected: (ProductEntity) -> Unit,
     onAmountChange: (String) -> Unit,
+    onUsePortionFraction: (Double) -> Unit,
     onAddFood: () -> Unit,
     onCancelEdit: () -> Unit
 ) {
@@ -293,12 +300,25 @@ private fun AddEditFoodSection(
             modifier = Modifier.fillMaxWidth(),
             label = {
                 Text(
-                    text = selectedProduct?.let { "Amount (${it.basePortionUnit})" } ?: "Amount"
+                    text = selectedProduct?.amountLabel() ?: "Amount"
                 )
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true
         )
+        if (selectedProduct != null && !selectedProduct.usesPortionInput()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { onUsePortionFraction(1.0) }) {
+                    Text("Full")
+                }
+                OutlinedButton(onClick = { onUsePortionFraction(0.5) }) {
+                    Text("Half")
+                }
+                OutlinedButton(onClick = { onUsePortionFraction(0.25) }) {
+                    Text("Quarter")
+                }
+            }
+        }
         selectedProduct?.let { product ->
             val previewEntry = buildEntryOrNull(
                 date = LocalDate.now().toString(),
@@ -357,7 +377,7 @@ private fun FoodEntryItem(
                 )
             }
             Text(
-                text = "${entry.amount.toCleanText()}${entry.unit}",
+                text = "${entry.amount.toCleanText()} ${entry.unit}",
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
@@ -387,7 +407,12 @@ private fun buildEntryOrNull(
         return null
     }
 
-    val multiplier = parsedAmount / product.basePortionAmount
+    val usesPortionInput = product.usesPortionInput()
+    val multiplier = if (usesPortionInput) {
+        parsedAmount
+    } else {
+        parsedAmount / product.basePortionAmount
+    }
 
     return FoodEntryEntity(
         existingEntry?.id ?: 0,
@@ -395,7 +420,7 @@ private fun buildEntryOrNull(
         product.id,
         product.name,
         parsedAmount,
-        product.basePortionUnit,
+        if (usesPortionInput) product.servingEntryUnit() else product.basePortionUnit,
         product.calories * multiplier,
         product.proteinGrams * multiplier,
         product.carbohydrateGrams * multiplier,
@@ -409,5 +434,49 @@ private fun Double.toCleanText(): String {
         toInt().toString()
     } else {
         String.format("%.1f", this)
+    }
+}
+
+private fun ProductEntity.defaultEntryAmount(): String {
+    return if (usesPortionInput()) {
+        "1"
+    } else {
+        basePortionAmount.toCleanText()
+    }
+}
+
+private fun ProductEntity.portionFractionAmount(fraction: Double): String {
+    return if (usesPortionInput()) {
+        fraction.toCleanText()
+    } else {
+        (basePortionAmount * fraction).toCleanText()
+    }
+}
+
+private fun ProductEntity.amountLabel(): String {
+    return if (usesPortionInput()) {
+        "Servings ($basePortionUnit)"
+    } else {
+        "Amount ($basePortionUnit)"
+    }
+}
+
+private fun ProductEntity.usesPortionInput(): Boolean {
+    val normalizedUnit = basePortionUnit.trim().lowercase()
+    return normalizedUnit in setOf(
+        "per bottle",
+        "per package"
+    )
+}
+
+private fun ProductEntity.servingEntryUnit(): String {
+    return "serving $basePortionUnit"
+}
+
+private fun FoodEntryEntity.toEditableAmount(product: ProductEntity): String {
+    return if (product.usesPortionInput() && unit != product.servingEntryUnit()) {
+        (amount / product.basePortionAmount).toCleanText()
+    } else {
+        amount.toCleanText()
     }
 }
