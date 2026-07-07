@@ -6,11 +6,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +30,7 @@ import com.example.caloriestrack.data.FoodEntryEntity
 import com.example.caloriestrack.data.GoalEntity
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 
 @Composable
@@ -33,10 +39,14 @@ fun AnalysisScreen(
     modifier: Modifier = Modifier
 ) {
     val today = remember { LocalDate.now() }
-    val weekStart = remember(today) {
+    val currentWeekStart = remember(today) {
         today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     }
+    var weekStart by remember { mutableStateOf(currentWeekStart) }
     val weekEnd = remember(weekStart) { weekStart.plusDays(6) }
+    val selectableWeeks = remember(currentWeekStart) {
+        (-26..26).map { offset -> currentWeekStart.plusWeeks(offset.toLong()) }
+    }
     var entries by remember { mutableStateOf(emptyList<FoodEntryEntity>()) }
     var goals by remember { mutableStateOf<GoalEntity?>(null) }
 
@@ -76,12 +86,55 @@ fun AnalysisScreen(
             style = MaterialTheme.typography.headlineMedium
         )
         Text(
-            text = "${weekStart} to ${weekEnd}",
+            text = "${weekStart.toDisplayDate()} to ${weekEnd.toDisplayDate()}",
             style = MaterialTheme.typography.bodyLarge
+        )
+        WeekSelector(
+            weeks = selectableWeeks,
+            selectedWeekStart = weekStart,
+            currentWeekStart = currentWeekStart,
+            onWeekSelected = { selectedWeek -> weekStart = selectedWeek }
         )
         WeeklyOverviewCard(stats = stats)
         MacroTotalsCard(stats = stats)
         DailyBreakdownCard(stats = stats)
+    }
+}
+
+@Composable
+private fun WeekSelector(
+    weeks: List<LocalDate>,
+    selectedWeekStart: LocalDate,
+    currentWeekStart: LocalDate,
+    onWeekSelected: (LocalDate) -> Unit
+) {
+    val listState = rememberLazyListState()
+    val currentWeekIndex = remember(weeks, currentWeekStart) {
+        weeks.indexOf(currentWeekStart).coerceAtLeast(0)
+    }
+
+    LaunchedEffect(currentWeekIndex) {
+        listState.scrollToItem(currentWeekIndex)
+    }
+
+    LazyRow(
+        state = listState,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        itemsIndexed(weeks) { _, weekStart ->
+            val weekEnd = weekStart.plusDays(6)
+            val label = "${weekStart.toShortDate()} - ${weekEnd.toShortDate()}"
+            if (weekStart == selectedWeekStart) {
+                Button(onClick = { onWeekSelected(weekStart) }) {
+                    Text(label)
+                }
+            } else {
+                OutlinedButton(onClick = { onWeekSelected(weekStart) }) {
+                    Text(label)
+                }
+            }
+        }
     }
 }
 
@@ -252,4 +305,12 @@ private fun Double.toCleanText(): String {
     } else {
         String.format("%.1f", this)
     }
+}
+
+private fun LocalDate.toShortDate(): String {
+    return format(DateTimeFormatter.ofPattern("dd-MM"))
+}
+
+private fun LocalDate.toDisplayDate(): String {
+    return format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
 }
