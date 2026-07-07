@@ -1,5 +1,6 @@
 package com.example.caloriestrack.ui.analysis
 
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -92,7 +93,6 @@ fun AnalysisScreen(
         WeekSelector(
             weeks = selectableWeeks,
             selectedWeekStart = weekStart,
-            currentWeekStart = currentWeekStart,
             onWeekSelected = { selectedWeek -> weekStart = selectedWeek }
         )
         WeeklyOverviewCard(stats = stats)
@@ -105,16 +105,30 @@ fun AnalysisScreen(
 private fun WeekSelector(
     weeks: List<LocalDate>,
     selectedWeekStart: LocalDate,
-    currentWeekStart: LocalDate,
     onWeekSelected: (LocalDate) -> Unit
 ) {
     val listState = rememberLazyListState()
-    val currentWeekIndex = remember(weeks, currentWeekStart) {
-        weeks.indexOf(currentWeekStart).coerceAtLeast(0)
+    val selectedWeekIndex = remember(weeks, selectedWeekStart) {
+        weeks.indexOf(selectedWeekStart).coerceAtLeast(0)
     }
 
-    LaunchedEffect(currentWeekIndex) {
-        listState.scrollToItem(currentWeekIndex)
+    LaunchedEffect(selectedWeekIndex) {
+        val layoutInfo = listState.layoutInfo
+        val selectedItem = layoutInfo.visibleItemsInfo.firstOrNull { it.index == selectedWeekIndex }
+        if (selectedItem != null) {
+            val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+            val itemCenter = selectedItem.offset + selectedItem.size / 2
+            listState.animateScrollBy((itemCenter - viewportCenter).toFloat())
+        } else {
+            val itemWidth = layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 0
+            val viewportWidth = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+            val centeredOffset = if (itemWidth > 0 && viewportWidth > itemWidth) {
+                -((viewportWidth - itemWidth) / 2)
+            } else {
+                0
+            }
+            listState.animateScrollToItem(selectedWeekIndex, centeredOffset)
+        }
     }
 
     LazyRow(
