@@ -14,6 +14,7 @@ public class ProductEntity {
     public double proteinGrams;
     public double carbohydrateGrams;
     public double fatGrams;
+    public boolean isFavorite;
     public long createdAtMillis;
 
     public ProductEntity(
@@ -25,6 +26,7 @@ public class ProductEntity {
             double proteinGrams,
             double carbohydrateGrams,
             double fatGrams,
+            boolean isFavorite,
             long createdAtMillis
     ) {
         this.id = id;
@@ -35,6 +37,7 @@ public class ProductEntity {
         this.proteinGrams = proteinGrams;
         this.carbohydrateGrams = carbohydrateGrams;
         this.fatGrams = fatGrams;
+        this.isFavorite = isFavorite;
         this.createdAtMillis = createdAtMillis;
     }
 }

@@ -5,6 +5,8 @@ import android.content.Context;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.migration.Migration;
+import androidx.sqlite.db.SupportSQLiteDatabase;
 
 @Database(
         entities = {
@@ -13,11 +15,17 @@ import androidx.room.RoomDatabase;
                 GoalEntity.class,
                 WeightLogEntity.class
         },
-        version = 1,
+        version = 2,
         exportSchema = false
 )
 public abstract class CaloriesTrackDatabase extends RoomDatabase {
     private static volatile CaloriesTrackDatabase instance;
+    private static final Migration MIGRATION_1_2 = new Migration(1, 2) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE products ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0");
+        }
+    };
 
     public abstract ProductDao productDao();
 
@@ -35,7 +43,7 @@ public abstract class CaloriesTrackDatabase extends RoomDatabase {
                             context.getApplicationContext(),
                             CaloriesTrackDatabase.class,
                             "calories_track.db"
-                    ).build();
+                    ).addMigrations(MIGRATION_1_2).build();
                 }
             }
         }

@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.caloriestrack.data.CaloriesRepository
@@ -75,6 +76,11 @@ fun TodayScreen(
             products = products,
             modifier = modifier,
             onBack = { isSelectingProduct = false },
+            onFavoriteToggle = { product ->
+                coroutineScope.launch {
+                    repository.setProductFavorite(product.id, !product.isFavorite)
+                }
+            },
             onProductSelected = { product ->
                 selectedProduct = product
                 amount = product.defaultEntryAmount()
@@ -348,13 +354,17 @@ private fun ProductPickerScreen(
     products: List<ProductEntity>,
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
+    onFavoriteToggle: (ProductEntity) -> Unit,
     onProductSelected: (ProductEntity) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     val filteredProducts = remember(products, query) {
         products.filter { product ->
             product.name.contains(query.trim(), ignoreCase = true)
-        }
+        }.sortedWith(
+            compareByDescending<ProductEntity> { it.isFavorite }
+                .thenBy { it.name.lowercase() }
+        )
     }
 
     LazyColumn(
@@ -396,6 +406,7 @@ private fun ProductPickerScreen(
             items(filteredProducts, key = { it.id }) { product ->
                 ProductPickerItem(
                     product = product,
+                    onFavoriteToggle = { onFavoriteToggle(product) },
                     onClick = { onProductSelected(product) }
                 )
             }
@@ -406,6 +417,7 @@ private fun ProductPickerScreen(
 @Composable
 private fun ProductPickerItem(
     product: ProductEntity,
+    onFavoriteToggle: () -> Unit,
     onClick: () -> Unit
 ) {
     Card(
@@ -416,10 +428,21 @@ private fun ProductPickerItem(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = product.name,
-                style = MaterialTheme.typography.titleMedium
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                TextButton(onClick = onFavoriteToggle) {
+                    Text(
+                        text = if (product.isFavorite) "★" else "☆",
+                        color = if (product.isFavorite) FavoriteYellow else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
             Text(
                 text = "${product.basePortionAmount.toCleanText()} ${product.basePortionUnit} - ${product.calories.toCleanText()} kcal",
                 style = MaterialTheme.typography.bodyMedium
@@ -560,3 +583,5 @@ private fun FoodEntryEntity.toEditableAmount(product: ProductEntity): String {
         amount.toCleanText()
     }
 }
+
+private val FavoriteYellow = Color(0xFFFFC107)

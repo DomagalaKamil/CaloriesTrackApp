@@ -29,4 +29,7 @@ public interface ProductDao {
 
     @Query("DELETE FROM products WHERE id = :id")
     void deleteProductById(long id);
+
+    @Query("UPDATE products SET isFavorite = :isFavorite WHERE id = :id")
+    void updateFavorite(long id, boolean isFavorite);
 }

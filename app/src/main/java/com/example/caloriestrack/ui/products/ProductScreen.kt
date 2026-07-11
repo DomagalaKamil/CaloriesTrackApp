@@ -399,6 +399,7 @@ private fun buildProductOrNull(
         parsedProtein * nutritionMultiplier,
         parsedCarbohydrates * nutritionMultiplier,
         parsedFat * nutritionMultiplier,
+        editingProduct?.isFavorite ?: false,
         editingProduct?.createdAtMillis ?: System.currentTimeMillis()
     )
 }

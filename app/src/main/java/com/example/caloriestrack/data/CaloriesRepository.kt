@@ -31,6 +31,10 @@ class CaloriesRepository(
         productDao.deleteProductById(id)
     }
 
+    suspend fun setProductFavorite(id: Long, isFavorite: Boolean) = withContext(Dispatchers.IO) {
+        productDao.updateFavorite(id, isFavorite)
+    }
+
     fun observeEntriesForDate(date: String) = foodEntryDao.observeEntriesForDate(date)
 
     fun observeEntriesBetweenDates(startDate: String, endDate: String) =
