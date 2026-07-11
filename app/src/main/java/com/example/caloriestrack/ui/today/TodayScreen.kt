@@ -1,7 +1,6 @@
 package com.example.caloriestrack.ui.today
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,8 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -49,6 +46,7 @@ fun TodayScreen(
     var goals by remember { mutableStateOf<GoalEntity?>(null) }
     var editingEntry by remember { mutableStateOf<FoodEntryEntity?>(null) }
     var selectedProduct by remember { mutableStateOf<ProductEntity?>(null) }
+    var isSelectingProduct by remember { mutableStateOf(false) }
     var amount by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
@@ -72,6 +70,21 @@ fun TodayScreen(
         repository.observeGoals().collect { goals = it }
     }
 
+    if (isSelectingProduct) {
+        ProductPickerScreen(
+            products = products,
+            modifier = modifier,
+            onBack = { isSelectingProduct = false },
+            onProductSelected = { product ->
+                selectedProduct = product
+                amount = product.defaultEntryAmount()
+                errorMessage = null
+                isSelectingProduct = false
+            }
+        )
+        return
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -93,11 +106,7 @@ fun TodayScreen(
                 selectedProduct = selectedProduct,
                 amount = amount,
                 errorMessage = errorMessage,
-                onProductSelected = {
-                    selectedProduct = it
-                    amount = it.defaultEntryAmount()
-                    errorMessage = null
-                },
+                onSelectProductClick = { isSelectingProduct = true },
                 onAmountChange = {
                     amount = it
                     errorMessage = null
@@ -252,14 +261,12 @@ private fun AddEditFoodSection(
     selectedProduct: ProductEntity?,
     amount: String,
     errorMessage: String?,
-    onProductSelected: (ProductEntity) -> Unit,
+    onSelectProductClick: () -> Unit,
     onAmountChange: (String) -> Unit,
     onUsePortionFraction: (Double) -> Unit,
     onAddFood: () -> Unit,
     onCancelEdit: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = if (editingEntry == null) "Add food" else "Edit food",
@@ -272,27 +279,11 @@ private fun AddEditFoodSection(
             )
             return
         }
-        Box {
-            OutlinedButton(
-                onClick = { expanded = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(selectedProduct?.name ?: "Select product")
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                products.forEach { product ->
-                    DropdownMenuItem(
-                        text = { Text(product.name) },
-                        onClick = {
-                            onProductSelected(product)
-                            expanded = false
-                        }
-                    )
-                }
-            }
+        OutlinedButton(
+            onClick = onSelectProductClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(selectedProduct?.name ?: "Select product")
         }
         OutlinedTextField(
             value = amount,
@@ -348,6 +339,95 @@ private fun AddEditFoodSection(
                     Text("Cancel")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ProductPickerScreen(
+    products: List<ProductEntity>,
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit,
+    onProductSelected: (ProductEntity) -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val filteredProducts = remember(products, query) {
+        products.filter { product ->
+            product.name.contains(query.trim(), ignoreCase = true)
+        }
+    }
+
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(onClick = onBack) {
+                    Text("Back")
+                }
+            }
+        }
+        item {
+            Text(
+                text = "Select product",
+                style = MaterialTheme.typography.headlineMedium
+            )
+        }
+        item {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Search products") },
+                singleLine = true
+            )
+        }
+        if (filteredProducts.isEmpty()) {
+            item {
+                Text(
+                    text = "No products found.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        } else {
+            items(filteredProducts, key = { it.id }) { product ->
+                ProductPickerItem(
+                    product = product,
+                    onClick = { onProductSelected(product) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProductPickerItem(
+    product: ProductEntity,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = product.name,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "${product.basePortionAmount.toCleanText()} ${product.basePortionUnit} - ${product.calories.toCleanText()} kcal",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "P ${product.proteinGrams.toCleanText()}g  C ${product.carbohydrateGrams.toCleanText()}g  F ${product.fatGrams.toCleanText()}g",
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
