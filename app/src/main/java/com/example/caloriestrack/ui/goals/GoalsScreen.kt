@@ -90,8 +90,12 @@ fun GoalsScreen(
                 )
                 OutlinedTextField(
                     value = dailyGoal,
-                    onValueChange = {
-                        dailyGoal = it
+                    onValueChange = { input ->
+                        dailyGoal = input
+                        weeklyGoal = input.toDoubleOrNull()
+                            ?.takeIf { it > 0 }
+                            ?.let { (it * 7.0).toCleanText() }
+                            ?: ""
                         errorMessage = null
                         successMessage = null
                     },
@@ -102,8 +106,12 @@ fun GoalsScreen(
                 )
                 OutlinedTextField(
                     value = weeklyGoal,
-                    onValueChange = {
-                        weeklyGoal = it
+                    onValueChange = { input ->
+                        weeklyGoal = input
+                        dailyGoal = input.toDoubleOrNull()
+                            ?.takeIf { it > 0 }
+                            ?.let { (it / 7.0).toCleanText() }
+                            ?: ""
                         errorMessage = null
                         successMessage = null
                     },
