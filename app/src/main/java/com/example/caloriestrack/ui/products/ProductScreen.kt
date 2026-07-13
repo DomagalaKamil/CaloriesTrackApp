@@ -42,6 +42,7 @@ fun ProductsScreen(
     var editingProduct by remember { mutableStateOf<ProductEntity?>(null) }
     var name by remember { mutableStateOf("") }
     var brand by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf(CategoryPlaceholder) }
     var portionAmount by remember { mutableStateOf("100") }
     var portionUnit by remember { mutableStateOf("g") }
     var calories by remember { mutableStateOf("") }
@@ -55,6 +56,7 @@ fun ProductsScreen(
         editingProduct = null
         name = ""
         brand = ""
+        category = CategoryPlaceholder
         portionAmount = "100"
         portionUnit = "g"
         calories = ""
@@ -68,6 +70,7 @@ fun ProductsScreen(
         editingProduct = product
         name = product.name
         brand = product.brand.orEmpty()
+        category = product.category.orEmpty().ifBlank { ProductCategory.Other.label }
         portionAmount = product.basePortionAmount.toCleanText()
         portionUnit = product.basePortionUnit
         val per100Multiplier = 100.0 / product.basePortionAmount
@@ -93,6 +96,7 @@ fun ProductsScreen(
                 editingProduct = editingProduct,
                 name = name,
                 brand = brand,
+                category = category,
                 portionAmount = portionAmount,
                 portionUnit = portionUnit,
                 calories = calories,
@@ -102,6 +106,7 @@ fun ProductsScreen(
                 errorMessage = errorMessage,
                 onNameChange = { name = it },
                 onBrandChange = { brand = it },
+                onCategoryChange = { category = it },
                 onPortionAmountChange = { portionAmount = it },
                 onPortionUnitChange = { selectedUnit ->
                     portionUnit = selectedUnit
@@ -116,6 +121,7 @@ fun ProductsScreen(
                         editingProduct = editingProduct,
                         name = name,
                         brand = brand,
+                        category = category,
                         portionAmount = portionAmount,
                         portionUnit = portionUnit,
                         calories = calories,
@@ -125,7 +131,7 @@ fun ProductsScreen(
                     )
 
                     if (product == null) {
-                        errorMessage = "Enter a name and valid positive numbers."
+                        errorMessage = "Enter a name, choose a category, and valid positive numbers."
                         return@ProductForm
                     }
 
@@ -180,6 +186,7 @@ private fun ProductForm(
     editingProduct: ProductEntity?,
     name: String,
     brand: String,
+    category: String,
     portionAmount: String,
     portionUnit: String,
     calories: String,
@@ -189,6 +196,7 @@ private fun ProductForm(
     errorMessage: String?,
     onNameChange: (String) -> Unit,
     onBrandChange: (String) -> Unit,
+    onCategoryChange: (String) -> Unit,
     onPortionAmountChange: (String) -> Unit,
     onPortionUnitChange: (String) -> Unit,
     onCaloriesChange: (String) -> Unit,
@@ -216,6 +224,11 @@ private fun ProductForm(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Product brand") },
             singleLine = true
+        )
+        CategoryDropdown(
+            selectedCategory = category,
+            onCategorySelected = onCategoryChange,
+            modifier = Modifier.fillMaxWidth()
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(
@@ -279,6 +292,38 @@ private fun ProductForm(
                 OutlinedButton(onClick = onCancel) {
                     Text("Cancel")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryDropdown(
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(selectedCategory)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            ProductCategory.entries.forEach { category ->
+                DropdownMenuItem(
+                    text = { Text(category.label) },
+                    onClick = {
+                        onCategorySelected(category.label)
+                        expanded = false
+                    }
+                )
             }
         }
     }
@@ -355,6 +400,10 @@ private fun ProductListItem(
                 )
             }
             Text(
+                text = product.category.orEmpty().ifBlank { ProductCategory.Other.label },
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
                 text = "${product.basePortionAmount.toCleanText()} ${product.basePortionUnit} - ${product.calories.toCleanText()} kcal",
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -378,6 +427,7 @@ private fun buildProductOrNull(
     editingProduct: ProductEntity?,
     name: String,
     brand: String,
+    category: String,
     portionAmount: String,
     portionUnit: String,
     calories: String,
@@ -392,6 +442,9 @@ private fun buildProductOrNull(
     val parsedFat = fat.toDoubleOrNull()
     val trimmedName = name.trim()
     val trimmedBrand = brand.trim()
+    val selectedCategory = category.takeIf { candidate ->
+        ProductCategory.entries.any { it.label == candidate }
+    } ?: return null
     val trimmedUnit = portionUnit.trim()
 
     if (
@@ -417,6 +470,7 @@ private fun buildProductOrNull(
         editingProduct?.id ?: 0,
         trimmedName,
         trimmedBrand,
+        selectedCategory,
         parsedPortionAmount,
         trimmedUnit,
         parsedCalories * nutritionMultiplier,
@@ -427,6 +481,19 @@ private fun buildProductOrNull(
         editingProduct?.createdAtMillis ?: System.currentTimeMillis()
     )
 }
+
+private enum class ProductCategory(val label: String) {
+    Fruit("Fruit"),
+    Meat("Meat"),
+    Dairy("Dairy"),
+    Drink("Drink"),
+    Sweets("Sweets"),
+    Grain("Grain"),
+    Vegetable("Vegetable"),
+    Other("Other")
+}
+
+private const val CategoryPlaceholder = "Choose category"
 
 private enum class ProductUnit(val label: String) {
     Ml("ml"),

@@ -360,7 +360,8 @@ private fun ProductPickerScreen(
     val filteredProducts = remember(products, query) {
         products.filter { product ->
             product.name.contains(query.trim(), ignoreCase = true) ||
-                product.brand.orEmpty().contains(query.trim(), ignoreCase = true)
+                product.brand.orEmpty().contains(query.trim(), ignoreCase = true) ||
+                product.category.orEmpty().contains(query.trim(), ignoreCase = true)
         }.sortedWith(
             compareByDescending<ProductEntity> { it.isFavorite }
                 .thenBy { it.name.lowercase() }
@@ -446,6 +447,10 @@ private fun ProductPickerItem(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+            Text(
+                text = product.category.orEmpty().ifBlank { "Other" },
+                style = MaterialTheme.typography.bodyMedium
+            )
             Text(
                 text = "${product.basePortionAmount.toCleanText()} ${product.basePortionUnit} - ${product.calories.toCleanText()} kcal",
                 style = MaterialTheme.typography.bodyMedium
