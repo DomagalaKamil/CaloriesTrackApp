@@ -40,6 +40,7 @@ fun ProductsScreen(
 ) {
     var products by remember { mutableStateOf(emptyList<ProductEntity>()) }
     var editingProduct by remember { mutableStateOf<ProductEntity?>(null) }
+    var isViewingSavedProducts by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var brand by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(CategoryPlaceholder) }
@@ -67,6 +68,7 @@ fun ProductsScreen(
     }
 
     fun startEditing(product: ProductEntity) {
+        isViewingSavedProducts = false
         editingProduct = product
         name = product.name
         brand = product.brand.orEmpty()
@@ -83,6 +85,24 @@ fun ProductsScreen(
 
     LaunchedEffect(repository) {
         repository.observeProducts().collect { products = it }
+    }
+
+    if (isViewingSavedProducts) {
+        SavedProductsScreen(
+            products = products,
+            modifier = modifier,
+            onBack = { isViewingSavedProducts = false },
+            onEdit = { product -> startEditing(product) },
+            onDelete = { product ->
+                coroutineScope.launch {
+                    repository.deleteProduct(product)
+                    if (editingProduct?.id == product.id) {
+                        clearForm()
+                    }
+                }
+            }
+        )
+        return
     }
 
     LazyColumn(
@@ -149,12 +169,43 @@ fun ProductsScreen(
         }
 
         item {
+            OutlinedButton(
+                onClick = { isViewingSavedProducts = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("View saved products (${products.size})")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedProductsScreen(
+    products: List<ProductEntity>,
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit,
+    onEdit: (ProductEntity) -> Unit,
+    onDelete: (ProductEntity) -> Unit
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(onClick = onBack) {
+                    Text("Back")
+                }
+            }
+        }
+        item {
             Text(
                 text = "Saved products",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.headlineMedium
             )
         }
-
         if (products.isEmpty()) {
             item {
                 Text(
@@ -166,15 +217,8 @@ fun ProductsScreen(
             items(products, key = { it.id }) { product ->
                 ProductListItem(
                     product = product,
-                    onEdit = { startEditing(product) },
-                    onDelete = {
-                        coroutineScope.launch {
-                            repository.deleteProduct(product)
-                            if (editingProduct?.id == product.id) {
-                                clearForm()
-                            }
-                        }
-                    }
+                    onEdit = { onEdit(product) },
+                    onDelete = { onDelete(product) }
                 )
             }
         }
