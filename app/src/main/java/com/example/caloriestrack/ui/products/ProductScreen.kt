@@ -41,6 +41,7 @@ fun ProductsScreen(
     var products by remember { mutableStateOf(emptyList<ProductEntity>()) }
     var editingProduct by remember { mutableStateOf<ProductEntity?>(null) }
     var name by remember { mutableStateOf("") }
+    var brand by remember { mutableStateOf("") }
     var portionAmount by remember { mutableStateOf("100") }
     var portionUnit by remember { mutableStateOf("g") }
     var calories by remember { mutableStateOf("") }
@@ -53,6 +54,7 @@ fun ProductsScreen(
     fun clearForm() {
         editingProduct = null
         name = ""
+        brand = ""
         portionAmount = "100"
         portionUnit = "g"
         calories = ""
@@ -65,6 +67,7 @@ fun ProductsScreen(
     fun startEditing(product: ProductEntity) {
         editingProduct = product
         name = product.name
+        brand = product.brand.orEmpty()
         portionAmount = product.basePortionAmount.toCleanText()
         portionUnit = product.basePortionUnit
         val per100Multiplier = 100.0 / product.basePortionAmount
@@ -89,6 +92,7 @@ fun ProductsScreen(
             ProductForm(
                 editingProduct = editingProduct,
                 name = name,
+                brand = brand,
                 portionAmount = portionAmount,
                 portionUnit = portionUnit,
                 calories = calories,
@@ -97,6 +101,7 @@ fun ProductsScreen(
                 fat = fat,
                 errorMessage = errorMessage,
                 onNameChange = { name = it },
+                onBrandChange = { brand = it },
                 onPortionAmountChange = { portionAmount = it },
                 onPortionUnitChange = { selectedUnit ->
                     portionUnit = selectedUnit
@@ -110,6 +115,7 @@ fun ProductsScreen(
                     val product = buildProductOrNull(
                         editingProduct = editingProduct,
                         name = name,
+                        brand = brand,
                         portionAmount = portionAmount,
                         portionUnit = portionUnit,
                         calories = calories,
@@ -173,6 +179,7 @@ fun ProductsScreen(
 private fun ProductForm(
     editingProduct: ProductEntity?,
     name: String,
+    brand: String,
     portionAmount: String,
     portionUnit: String,
     calories: String,
@@ -181,6 +188,7 @@ private fun ProductForm(
     fat: String,
     errorMessage: String?,
     onNameChange: (String) -> Unit,
+    onBrandChange: (String) -> Unit,
     onPortionAmountChange: (String) -> Unit,
     onPortionUnitChange: (String) -> Unit,
     onCaloriesChange: (String) -> Unit,
@@ -200,6 +208,13 @@ private fun ProductForm(
             onValueChange = onNameChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Product name") },
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = brand,
+            onValueChange = onBrandChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Product brand") },
             singleLine = true
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -333,6 +348,12 @@ private fun ProductListItem(
                 text = product.name,
                 style = MaterialTheme.typography.titleMedium
             )
+            if (product.brand.orEmpty().isNotBlank()) {
+                Text(
+                    text = product.brand.orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             Text(
                 text = "${product.basePortionAmount.toCleanText()} ${product.basePortionUnit} - ${product.calories.toCleanText()} kcal",
                 style = MaterialTheme.typography.bodyMedium
@@ -356,6 +377,7 @@ private fun ProductListItem(
 private fun buildProductOrNull(
     editingProduct: ProductEntity?,
     name: String,
+    brand: String,
     portionAmount: String,
     portionUnit: String,
     calories: String,
@@ -369,6 +391,7 @@ private fun buildProductOrNull(
     val parsedCarbohydrates = carbohydrates.toDoubleOrNull()
     val parsedFat = fat.toDoubleOrNull()
     val trimmedName = name.trim()
+    val trimmedBrand = brand.trim()
     val trimmedUnit = portionUnit.trim()
 
     if (
@@ -393,6 +416,7 @@ private fun buildProductOrNull(
     return ProductEntity(
         editingProduct?.id ?: 0,
         trimmedName,
+        trimmedBrand,
         parsedPortionAmount,
         trimmedUnit,
         parsedCalories * nutritionMultiplier,

@@ -160,6 +160,12 @@ private fun HistoryEntryItem(entry: FoodEntryEntity) {
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+            if (entry.productBrand.orEmpty().isNotBlank()) {
+                Text(
+                    text = entry.productBrand.orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             Text(
                 text = "${entry.amount.toCleanText()}${entry.unit}",
                 style = MaterialTheme.typography.bodyMedium

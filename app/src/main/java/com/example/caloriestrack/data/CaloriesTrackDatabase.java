@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
                 GoalEntity.class,
                 WeightLogEntity.class
         },
-        version = 2,
+        version = 3,
         exportSchema = false
 )
 public abstract class CaloriesTrackDatabase extends RoomDatabase {
@@ -24,6 +24,13 @@ public abstract class CaloriesTrackDatabase extends RoomDatabase {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
             database.execSQL("ALTER TABLE products ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+    private static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE products ADD COLUMN brand TEXT DEFAULT ''");
+            database.execSQL("ALTER TABLE food_entries ADD COLUMN productBrand TEXT DEFAULT ''");
         }
     };
 
@@ -43,7 +50,7 @@ public abstract class CaloriesTrackDatabase extends RoomDatabase {
                             context.getApplicationContext(),
                             CaloriesTrackDatabase.class,
                             "calories_track.db"
-                    ).addMigrations(MIGRATION_1_2).build();
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build();
                 }
             }
         }

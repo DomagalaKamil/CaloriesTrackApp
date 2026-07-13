@@ -25,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.caloriestrack.data.CaloriesRepository
@@ -360,7 +359,8 @@ private fun ProductPickerScreen(
     var query by remember { mutableStateOf("") }
     val filteredProducts = remember(products, query) {
         products.filter { product ->
-            product.name.contains(query.trim(), ignoreCase = true)
+            product.name.contains(query.trim(), ignoreCase = true) ||
+                product.brand.orEmpty().contains(query.trim(), ignoreCase = true)
         }.sortedWith(
             compareByDescending<ProductEntity> { it.isFavorite }
                 .thenBy { it.name.lowercase() }
@@ -437,11 +437,14 @@ private fun ProductPickerItem(
                     style = MaterialTheme.typography.titleMedium
                 )
                 TextButton(onClick = onFavoriteToggle) {
-                    Text(
-                        text = if (product.isFavorite) "★" else "☆",
-                        color = if (product.isFavorite) FavoriteYellow else MaterialTheme.colorScheme.onSurface
-                    )
+                    Text(if (product.isFavorite) "*" else "Star")
                 }
+            }
+            if (product.brand.orEmpty().isNotBlank()) {
+                Text(
+                    text = product.brand.orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
             Text(
                 text = "${product.basePortionAmount.toCleanText()} ${product.basePortionUnit} - ${product.calories.toCleanText()} kcal",
@@ -476,6 +479,12 @@ private fun FoodEntryItem(
                 )
                 Text(
                     text = "${entry.calories.toCleanText()} kcal",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            if (entry.productBrand.orEmpty().isNotBlank()) {
+                Text(
+                    text = entry.productBrand.orEmpty(),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -522,6 +531,7 @@ private fun buildEntryOrNull(
         date,
         product.id,
         product.name,
+        product.brand.orEmpty(),
         parsedAmount,
         if (usesPortionInput) product.servingEntryUnit() else product.basePortionUnit,
         product.calories * multiplier,
@@ -583,5 +593,3 @@ private fun FoodEntryEntity.toEditableAmount(product: ProductEntity): String {
         amount.toCleanText()
     }
 }
-
-private val FavoriteYellow = Color(0xFFFFC107)

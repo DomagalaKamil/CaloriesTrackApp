@@ -1,6 +1,7 @@
 package com.example.caloriestrack.data;
 
 import androidx.room.Entity;
+import androidx.room.ColumnInfo;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
@@ -17,6 +18,8 @@ public class FoodEntryEntity {
     public String date;
     public Long productId;
     public String productName;
+    @ColumnInfo(defaultValue = "''")
+    public String productBrand;
     public double amount;
     public String unit;
     public double calories;
@@ -30,6 +33,7 @@ public class FoodEntryEntity {
             String date,
             Long productId,
             String productName,
+            String productBrand,
             double amount,
             String unit,
             double calories,
@@ -42,6 +46,7 @@ public class FoodEntryEntity {
         this.date = date;
         this.productId = productId;
         this.productName = productName;
+        this.productBrand = productBrand;
         this.amount = amount;
         this.unit = unit;
         this.calories = calories;
