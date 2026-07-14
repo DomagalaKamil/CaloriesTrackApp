@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -187,6 +188,20 @@ private fun SavedProductsScreen(
     onEdit: (ProductEntity) -> Unit,
     onDelete: (ProductEntity) -> Unit
 ) {
+    var selectedCategory by remember { mutableStateOf(CategoryFilterAll) }
+    val categoryFilters = remember {
+        listOf(CategoryFilterAll) + ProductCategory.entries.map { it.label }
+    }
+    val filteredProducts = remember(products, selectedCategory) {
+        if (selectedCategory == CategoryFilterAll) {
+            products
+        } else {
+            products.filter { product ->
+                product.category.orEmpty().ifBlank { ProductCategory.Other.label } == selectedCategory
+            }
+        }
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -206,6 +221,13 @@ private fun SavedProductsScreen(
                 style = MaterialTheme.typography.headlineMedium
             )
         }
+        item {
+            CategoryFilterRow(
+                categories = categoryFilters,
+                selectedCategory = selectedCategory,
+                onCategorySelected = { selectedCategory = it }
+            )
+        }
         if (products.isEmpty()) {
             item {
                 Text(
@@ -213,13 +235,44 @@ private fun SavedProductsScreen(
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
+        } else if (filteredProducts.isEmpty()) {
+            item {
+                Text(
+                    text = "No products in this category.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         } else {
-            items(products, key = { it.id }) { product ->
+            items(filteredProducts, key = { it.id }) { product ->
                 ProductListItem(
                     product = product,
                     onEdit = { onEdit(product) },
                     onDelete = { onDelete(product) }
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryFilterRow(
+    categories: List<String>,
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        items(categories) { category ->
+            if (category == selectedCategory) {
+                Button(onClick = { onCategorySelected(category) }) {
+                    Text(category)
+                }
+            } else {
+                OutlinedButton(onClick = { onCategorySelected(category) }) {
+                    Text(category)
+                }
             }
         }
     }
@@ -538,6 +591,7 @@ private enum class ProductCategory(val label: String) {
 }
 
 private const val CategoryPlaceholder = "Choose category"
+private const val CategoryFilterAll = "All"
 
 private enum class ProductUnit(val label: String) {
     Ml("ml"),
