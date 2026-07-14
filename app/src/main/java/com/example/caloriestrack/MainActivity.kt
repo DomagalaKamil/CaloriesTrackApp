@@ -26,6 +26,7 @@ import com.example.caloriestrack.ui.history.HistoryScreen
 import com.example.caloriestrack.ui.products.ProductsScreen
 import com.example.caloriestrack.ui.theme.CaloriesTrackTheme
 import com.example.caloriestrack.ui.today.TodayScreen
+import com.example.caloriestrack.ui.weight.WeightScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,6 +94,12 @@ fun CaloriesTrackApp() {
                     modifier = Modifier.padding(innerPadding)
                 )
             }
+            AppSection.Weight -> {
+                WeightScreen(
+                    repository = repository,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
         }
     }
 }
@@ -105,7 +112,8 @@ private enum class AppSection(
     Products("Products", "P"),
     History("History", "H"),
     Analysis("Analysis", "A"),
-    Goals("Goals", "G")
+    Goals("Goals", "G"),
+    Weight("Weight", "W")
 }
 
 @Preview(showBackground = true)

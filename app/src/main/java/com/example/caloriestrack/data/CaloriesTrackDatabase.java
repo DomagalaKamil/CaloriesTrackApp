@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
                 GoalEntity.class,
                 WeightLogEntity.class
         },
-        version = 4,
+        version = 5,
         exportSchema = false
 )
 public abstract class CaloriesTrackDatabase extends RoomDatabase {
@@ -39,6 +39,21 @@ public abstract class CaloriesTrackDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE products ADD COLUMN category TEXT DEFAULT 'Other'");
         }
     };
+    private static final Migration MIGRATION_4_5 = new Migration(4, 5) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS weight_logs_new (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "date TEXT NOT NULL, " +
+                    "weightKg REAL NOT NULL, " +
+                    "createdAtMillis INTEGER NOT NULL)");
+            database.execSQL("INSERT INTO weight_logs_new (date, weightKg, createdAtMillis) " +
+                    "SELECT date, weightKg, createdAtMillis FROM weight_logs");
+            database.execSQL("DROP TABLE weight_logs");
+            database.execSQL("ALTER TABLE weight_logs_new RENAME TO weight_logs");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_weight_logs_date ON weight_logs(date)");
+        }
+    };
 
     public abstract ProductDao productDao();
 
@@ -56,7 +71,7 @@ public abstract class CaloriesTrackDatabase extends RoomDatabase {
                             context.getApplicationContext(),
                             CaloriesTrackDatabase.class,
                             "calories_track.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build();
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build();
                 }
             }
         }

@@ -72,11 +72,15 @@ class CaloriesRepository(
         weightLogDao.observeWeightLogsBetweenDates(startDate, endDate)
 
     suspend fun saveWeightLog(weightLog: WeightLogEntity) = withContext(Dispatchers.IO) {
-        weightLogDao.upsertWeightLog(weightLog)
+        weightLogDao.insertWeightLog(weightLog)
     }
 
-    suspend fun deleteWeightLogByDate(date: String) = withContext(Dispatchers.IO) {
-        weightLogDao.deleteWeightLogByDate(date)
+    suspend fun deleteWeightLog(weightLog: WeightLogEntity) = withContext(Dispatchers.IO) {
+        weightLogDao.deleteWeightLog(weightLog)
+    }
+
+    suspend fun deleteWeightLogById(id: Long) = withContext(Dispatchers.IO) {
+        weightLogDao.deleteWeightLogById(id)
     }
 
     companion object {
