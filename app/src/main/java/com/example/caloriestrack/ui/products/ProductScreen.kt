@@ -1,5 +1,6 @@
 package com.example.caloriestrack.ui.products
 
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -260,11 +263,36 @@ private fun CategoryFilterRow(
     selectedCategory: String,
     onCategorySelected: (String) -> Unit
 ) {
+    val listState = rememberLazyListState()
+    val selectedCategoryIndex = remember(categories, selectedCategory) {
+        categories.indexOf(selectedCategory).coerceAtLeast(0)
+    }
+
+    LaunchedEffect(selectedCategoryIndex) {
+        val layoutInfo = listState.layoutInfo
+        val selectedItem = layoutInfo.visibleItemsInfo.firstOrNull { it.index == selectedCategoryIndex }
+        if (selectedItem != null) {
+            val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+            val itemCenter = selectedItem.offset + selectedItem.size / 2
+            listState.animateScrollBy((itemCenter - viewportCenter).toFloat())
+        } else {
+            val itemWidth = layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 0
+            val viewportWidth = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+            val centeredOffset = if (itemWidth > 0 && viewportWidth > itemWidth) {
+                -((viewportWidth - itemWidth) / 2)
+            } else {
+                0
+            }
+            listState.animateScrollToItem(selectedCategoryIndex, centeredOffset)
+        }
+    }
+
     LazyRow(
+        state = listState,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        items(categories) { category ->
+        itemsIndexed(categories) { _, category ->
             if (category == selectedCategory) {
                 Button(onClick = { onCategorySelected(category) }) {
                     Text(category)
