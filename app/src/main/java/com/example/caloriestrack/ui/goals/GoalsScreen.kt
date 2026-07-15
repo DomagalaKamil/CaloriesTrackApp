@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.example.caloriestrack.data.CaloriesRepository
 import com.example.caloriestrack.data.FoodEntryEntity
 import com.example.caloriestrack.data.GoalEntity
+import com.example.caloriestrack.data.WeightLogEntity
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
@@ -45,17 +46,24 @@ fun GoalsScreen(
     val weekEnd = remember(weekStart) { weekStart.plusDays(6) }
     var goals by remember { mutableStateOf<GoalEntity?>(null) }
     var weekEntries by remember { mutableStateOf(emptyList<FoodEntryEntity>()) }
+    var weightLogs by remember { mutableStateOf(emptyList<WeightLogEntity>()) }
     var dailyGoal by remember { mutableStateOf("") }
     var weeklyGoal by remember { mutableStateOf("") }
+    var proteinGoal by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
+    var proteinMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val currentWeight = remember(weightLogs) {
+        weightLogs.maxByOrNull { it.createdAtMillis }
+    }
 
     LaunchedEffect(repository) {
         repository.observeGoals().collect { savedGoals ->
             goals = savedGoals
             dailyGoal = savedGoals?.dailyCalorieGoal?.takeIf { it > 0 }?.toCleanText() ?: ""
             weeklyGoal = savedGoals?.weeklyCalorieGoal?.takeIf { it > 0 }?.toCleanText() ?: ""
+            proteinGoal = savedGoals?.dailyProteinGoal?.takeIf { it > 0 }?.toCleanText() ?: ""
         }
     }
 
@@ -65,6 +73,12 @@ fun GoalsScreen(
             weekEnd.toString()
         ).collect { entries ->
             weekEntries = entries
+        }
+    }
+
+    LaunchedEffect(repository) {
+        repository.observeWeightLogs().collect { logs ->
+            weightLogs = logs
         }
     }
 
@@ -120,6 +134,47 @@ fun GoalsScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true
                 )
+                Text(
+                    text = "Daily protein",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                OutlinedTextField(
+                    value = proteinGoal,
+                    onValueChange = { input ->
+                        proteinGoal = input
+                        errorMessage = null
+                        successMessage = null
+                        proteinMessage = null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Daily protein goal (g)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true
+                )
+                Button(
+                    onClick = {
+                        val latestWeight = currentWeight
+                        if (latestWeight == null) {
+                            proteinMessage = "No body weight provided. Add your weight in the Weight tab first."
+                            errorMessage = null
+                            successMessage = null
+                            return@Button
+                        }
+
+                        proteinGoal = (latestWeight.weightKg * ProteinPerKg).toCleanText()
+                        proteinMessage = "Calculated from ${latestWeight.weightKg.toCleanText()} kg x ${ProteinPerKg.toCleanText()}g."
+                        errorMessage = null
+                        successMessage = null
+                    }
+                ) {
+                    Text("Calculate from current weight")
+                }
+                if (proteinMessage != null) {
+                    Text(
+                        text = proteinMessage ?: "",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
                 if (errorMessage != null) {
                     Text(
                         text = errorMessage ?: "",
@@ -138,6 +193,7 @@ fun GoalsScreen(
                     onClick = {
                         val parsedDailyGoal = dailyGoal.toDoubleOrNull()
                         val parsedWeeklyGoal = weeklyGoal.toDoubleOrNull()
+                        val parsedProteinGoal = proteinGoal.toDoubleOrNull()
                         if (parsedDailyGoal == null || parsedDailyGoal <= 0) {
                             errorMessage = "Enter a daily calorie goal greater than 0."
                             successMessage = null
@@ -148,11 +204,17 @@ fun GoalsScreen(
                             successMessage = null
                             return@Button
                         }
+                        if (proteinGoal.isNotBlank() && (parsedProteinGoal == null || parsedProteinGoal <= 0)) {
+                            errorMessage = "Enter a protein goal greater than 0, or leave it empty."
+                            successMessage = null
+                            return@Button
+                        }
 
                         val updatedGoals = GoalEntity(
                             GoalEntity.DEFAULT_GOALS_ID,
                             parsedDailyGoal,
                             parsedWeeklyGoal,
+                            parsedProteinGoal ?: 0.0,
                             System.currentTimeMillis()
                         )
 
@@ -268,3 +330,5 @@ private fun Double.toCleanText(): String {
         toString()
     }
 }
+
+private const val ProteinPerKg = 1.7

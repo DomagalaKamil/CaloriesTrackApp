@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
                 GoalEntity.class,
                 WeightLogEntity.class
         },
-        version = 5,
+        version = 6,
         exportSchema = false
 )
 public abstract class CaloriesTrackDatabase extends RoomDatabase {
@@ -54,6 +54,12 @@ public abstract class CaloriesTrackDatabase extends RoomDatabase {
             database.execSQL("CREATE INDEX IF NOT EXISTS index_weight_logs_date ON weight_logs(date)");
         }
     };
+    private static final Migration MIGRATION_5_6 = new Migration(5, 6) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE goals ADD COLUMN dailyProteinGoal REAL NOT NULL DEFAULT 0");
+        }
+    };
 
     public abstract ProductDao productDao();
 
@@ -71,7 +77,7 @@ public abstract class CaloriesTrackDatabase extends RoomDatabase {
                             context.getApplicationContext(),
                             CaloriesTrackDatabase.class,
                             "calories_track.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build();
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build();
                 }
             }
         }

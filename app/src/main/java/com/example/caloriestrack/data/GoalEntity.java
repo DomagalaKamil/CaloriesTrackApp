@@ -11,17 +11,20 @@ public class GoalEntity {
     public int id;
     public double dailyCalorieGoal;
     public double weeklyCalorieGoal;
+    public double dailyProteinGoal;
     public long updatedAtMillis;
 
     public GoalEntity(
             int id,
             double dailyCalorieGoal,
             double weeklyCalorieGoal,
+            double dailyProteinGoal,
             long updatedAtMillis
     ) {
         this.id = id;
         this.dailyCalorieGoal = dailyCalorieGoal;
         this.weeklyCalorieGoal = weeklyCalorieGoal;
+        this.dailyProteinGoal = dailyProteinGoal;
         this.updatedAtMillis = updatedAtMillis;
     }
 }
