@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import com.example.caloriestrack.data.CaloriesRepository
 import com.example.caloriestrack.data.WeightLogEntity
 import java.time.LocalDate
+import java.util.Locale
+import kotlin.math.round
 import kotlinx.coroutines.launch
 
 @Composable
@@ -261,7 +263,7 @@ private fun WeightAnalysisSummaryCard(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "${stats.weightChange.toSignedCleanText()} kg (${stats.percentChange.toSignedCleanText()}%)",
+                    text = "${stats.weightChange.toSignedCleanText()} kg (${stats.percentChange.toSignedPercentText()}%)",
                     color = changeColor,
                     style = MaterialTheme.typography.titleLarge
                 )
@@ -330,7 +332,7 @@ private fun WeightAnalysisScreen(
                         )
                         MetricRow(
                             "Percent change",
-                            "${stats.percentChange.toSignedCleanText()}%"
+                            "${stats.percentChange.toSignedPercentText()}%"
                         )
                     }
                 }
@@ -571,6 +573,13 @@ private fun Double.toCleanText(): String {
 private fun Double.toSignedCleanText(): String {
     val prefix = if (this > 0) "+" else ""
     return prefix + toCleanText()
+}
+
+private fun Double.toSignedPercentText(): String {
+    val roundedValue = round(this * 100.0) / 100.0
+    val displayValue = if (roundedValue == -0.0) 0.0 else roundedValue
+    val prefix = if (displayValue > 0) "+" else ""
+    return prefix + String.format(Locale.getDefault(), "%.2f", displayValue)
 }
 
 private fun List<WeightLogEntity>.latestInput(): WeightLogEntity? {
