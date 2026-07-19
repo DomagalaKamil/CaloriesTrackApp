@@ -61,7 +61,9 @@ fun WeightScreen(
         }
     }
 
-    val latestWeight = weightLogs.maxByOrNull { it.createdAtMillis }
+    val latestWeight = remember(weightLogs) {
+        weightLogs.latestInput()
+    }
     val weekAnalysis = remember(weightLogs) {
         WeightAnalysisStats.from(
             logs = weightLogs,
@@ -500,10 +502,10 @@ private data class WeightAnalysisStats(
             val filteredLogs = logs.filter { log ->
                 val logDate = runCatching { LocalDate.parse(log.date) }.getOrNull()
                 logDate != null && (startDate == null || !logDate.isBefore(startDate)) && !logDate.isAfter(today)
-            }.sortedWith(compareBy<WeightLogEntity> { it.date }.thenBy { it.createdAtMillis })
+            }.sortedByTimeline()
 
             val startWeight = filteredLogs.firstOrNull()?.weightKg ?: 0.0
-            val currentWeight = filteredLogs.lastOrNull()?.weightKg ?: 0.0
+            val currentWeight = filteredLogs.latestInput()?.weightKg ?: 0.0
             val weightChange = currentWeight - startWeight
             val percentChange = if (startWeight > 0) {
                 (weightChange / startWeight) * 100.0
@@ -569,6 +571,21 @@ private fun Double.toCleanText(): String {
 private fun Double.toSignedCleanText(): String {
     val prefix = if (this > 0) "+" else ""
     return prefix + toCleanText()
+}
+
+private fun List<WeightLogEntity>.latestInput(): WeightLogEntity? {
+    return maxWithOrNull(
+        compareBy<WeightLogEntity> { it.createdAtMillis }
+            .thenBy { it.id }
+    )
+}
+
+private fun List<WeightLogEntity>.sortedByTimeline(): List<WeightLogEntity> {
+    return sortedWith(
+        compareBy<WeightLogEntity> { it.date }
+            .thenBy { it.createdAtMillis }
+            .thenBy { it.id }
+    )
 }
 
 private val WeightLossGreen = Color(0xFF2E7D32)

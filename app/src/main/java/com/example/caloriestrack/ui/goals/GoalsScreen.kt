@@ -55,7 +55,10 @@ fun GoalsScreen(
     var proteinMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val currentWeight = remember(weightLogs) {
-        weightLogs.maxByOrNull { it.createdAtMillis }
+        weightLogs.maxWithOrNull(
+            compareBy<WeightLogEntity> { it.createdAtMillis }
+                .thenBy { it.id }
+        )
     }
 
     LaunchedEffect(repository) {
