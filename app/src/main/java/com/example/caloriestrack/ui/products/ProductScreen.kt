@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -31,6 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.caloriestrack.data.CaloriesRepository
@@ -112,6 +117,7 @@ fun ProductsScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -331,6 +337,14 @@ private fun ProductForm(
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+    val nextKeyboardAction = KeyboardActions(
+        onNext = { focusManager.moveFocus(FocusDirection.Next) }
+    )
+    val doneKeyboardAction = KeyboardActions(
+        onDone = { focusManager.clearFocus() }
+    )
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = if (editingProduct == null) "Add product" else "Edit product",
@@ -341,6 +355,8 @@ private fun ProductForm(
             onValueChange = onNameChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Product name") },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = nextKeyboardAction,
             singleLine = true
         )
         OutlinedTextField(
@@ -348,6 +364,8 @@ private fun ProductForm(
             onValueChange = onBrandChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Product brand") },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = nextKeyboardAction,
             singleLine = true
         )
         CategoryDropdown(
@@ -361,7 +379,11 @@ private fun ProductForm(
                 onValueChange = onPortionAmountChange,
                 modifier = Modifier.weight(1f),
                 label = { Text("Full portion size") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = nextKeyboardAction,
                 singleLine = true
             )
             UnitDropdown(
@@ -379,7 +401,11 @@ private fun ProductForm(
             onValueChange = onCaloriesChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Calories") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = nextKeyboardAction,
             singleLine = true
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -387,18 +413,24 @@ private fun ProductForm(
                 value = protein,
                 onValueChange = onProteinChange,
                 label = "Protein",
+                imeAction = ImeAction.Next,
+                keyboardActions = nextKeyboardAction,
                 modifier = Modifier.weight(1f)
             )
             MacroTextField(
                 value = carbohydrates,
                 onValueChange = onCarbohydratesChange,
                 label = "Carbs",
+                imeAction = ImeAction.Next,
+                keyboardActions = nextKeyboardAction,
                 modifier = Modifier.weight(1f)
             )
             MacroTextField(
                 value = fat,
                 onValueChange = onFatChange,
                 label = "Fat",
+                imeAction = ImeAction.Done,
+                keyboardActions = doneKeyboardAction,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -491,6 +523,8 @@ private fun MacroTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
+    imeAction: ImeAction,
+    keyboardActions: KeyboardActions,
     modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
@@ -498,7 +532,11 @@ private fun MacroTextField(
         onValueChange = onValueChange,
         modifier = modifier,
         label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal,
+            imeAction = imeAction
+        ),
+        keyboardActions = keyboardActions,
         singleLine = true
     )
 }

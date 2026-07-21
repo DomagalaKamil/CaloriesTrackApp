@@ -297,7 +297,7 @@ private fun WeeklyGoalSummary(
             GoalMetricRow(
                 label = "Average remaining per day",
                 value = if (remaining >= 0) {
-                    "${averageRemaining.toCleanText()} kcal"
+                    "${averageRemaining.toTwoDecimalText()} kcal"
                 } else {
                     "0 kcal"
                 }
@@ -332,6 +332,10 @@ private fun Double.toCleanText(): String {
     } else {
         toString()
     }
+}
+
+private fun Double.toTwoDecimalText(): String {
+    return String.format("%.2f", this)
 }
 
 private const val ProteinPerKg = 1.7
